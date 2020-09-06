@@ -9,7 +9,6 @@ from copy import deepcopy
 nodes = 0
 depth = 4
 moves = 0
-first_move_black = 0  #Used to avoid AI start first.
 
 #Tkinter setup
 root = Tk()
@@ -22,6 +21,7 @@ class Board:
 		self.player = 0
 		self.passed = False
 		self.won = False
+		self.flag = 1
 		#Initializing an empty board
 		self.array = []
 		for x in range(8):
@@ -106,7 +106,7 @@ class Board:
         #Drawing of highlight circles
 		for x in range(8):
 			for y in range(8):
-				if self.player == 0:
+				if self.player == 1:
 					if valid(self.array,self.player,x,y):
 						screen.create_oval(68+50*x,68+50*y,32+50*(x+1),32+50*(y+1),tags="highlight",fill="#008000",outline="#008000")
     
@@ -114,22 +114,26 @@ class Board:
 			#Draw the scoreboard and update the screen
 			self.drawScoreBoard()
 			screen.update()
-			if first_move_black==1:
-				position = dumbMove(self)
-				self.oldarray[position[0]][position[1]]="b"
-				self.player = 1-self.player
-				self.passTest()
                 
 			#If the computer is AI, make a move
-			if self.player==1:
+			if self.player==0 and self.flag==0:
+				'''
+				if self.flag==1:
+					self.flag=0
+					position = self.dumbMove()
+					self.oldarray[position[0]][position[1]]="b"
+					self.player = 1-self.player
+					self.passTest()
+				'''	
 				startTime = time()
+				print("I'm in.")
 				self.oldarray = self.array
 				alphaBetaResult = self.alphaBeta(self.array,depth,-float("inf"),float("inf"),1)
 				self.array = alphaBetaResult[1]
 
 				if len(alphaBetaResult)==3:
 					position = alphaBetaResult[2]
-					self.oldarray[position[0]][position[1]]="w"
+					self.oldarray[position[0]][position[1]]="b"
 				self.player = 1-self.player
 				deltaTime = round((time()-startTime)*100)/100
 				if deltaTime<2:
@@ -137,6 +141,14 @@ class Board:
 				nodes = 0
 				#Player must pass?
 				self.passTest()
+				
+			elif self.flag==1 and self.player==0:
+				print("OMG.")
+				position = self.dumbMove()
+				self.boardMove_b(position[0],position[1])
+				self.flag = 0
+				#print(self.flag,"\n",self.oldarray,"\n",self.array)
+
 		else:
 			screen.create_text(250,550,anchor="c",font=("Consolas",15), text="The game is done!")
             
@@ -150,10 +162,26 @@ class Board:
 					choices.append([x,y])
 		#Chooses a random move, moves there
 		dumbChoice = choice(choices)
-		self.arrayMove(dumbChoice[0],dumbChoice[1])
-
+		return dumbChoice
+		
     #Moves to position
 	def boardMove(self,x,y):
+		global nodes
+		#Move and update screen
+		self.oldarray = self.array
+		self.oldarray[x][y]="w"
+		self.array = move(self.array,x,y)
+		
+		#Switch Player
+		self.player = 1-self.player
+		self.update()
+		
+		#Check if ai must pass
+		self.passTest()
+		self.update()
+    
+    #Moves to position
+	def boardMove_b(self,x,y):
 		global nodes
 		#Move and update screen
 		self.oldarray = self.array
@@ -536,7 +564,7 @@ def clickHandle(event):
 			playGame()
 		else:
 			#Is it the player's turn?
-			if board.player==0:
+			if board.player==1:
 				#Delete the highlights
 				x = int((event.x-50)/50)
 				y = int((event.y-50)/50)
@@ -589,7 +617,6 @@ def playGame():
 	screen.delete(ALL)
 	create_buttons()
 	board = 0
-
 	#Draw the background
 	drawGridBackground()
 
